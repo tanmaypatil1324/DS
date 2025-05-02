@@ -1,0 +1,335 @@
+Bully************************
+
+import java.util.*;
+
+public class Bully {
+	static boolean[] up = {true, true, true, true, true};
+
+	static void up(int p) {
+		up[p - 1] = true;
+		System.out.println("P" + p + " starts election.");
+		for (int i = p; i < 5; i++) {
+			System.out.println("P" + p + " -> P" + (i + 1));
+		}
+		for (int i = 5; i > p; i--) {
+			if (up[i - 1]) {
+				System.out.println("P" + i + " is new coordinator.");
+				break;
+			}
+		}
+	}
+
+	static void down(int p) {
+		up[p - 1] = false;
+		System.out.println("P" + p + " is down.");
+	}
+
+	static void msg(int p) {
+		if (!up[p - 1]) {
+			System.out.println("P" + p + " is down.");
+		} else if (up[4]) {
+			System.out.println("Coordinator (P5) is alive.");
+		} else {
+			up(p);
+		}
+	}
+
+	public static void main(String[] a) {
+		Scanner sc = new Scanner(System.in);
+		while (true) {
+			System.out.println("1.Up 2.Down 3.Msg 4.Exit");
+			int ch = sc.nextInt();
+			if (ch == 4) break;
+			System.out.print("Process (1-5): ");
+			int p = sc.nextInt();
+			if (p < 1 || p > 5) continue;
+			if (ch == 1) up(p);
+			else if (ch == 2) down(p);
+			else if (ch == 3) msg(p);
+		}
+	}
+}
+
+
+Berkeley*********************************
+
+import java.io.*;
+import java.time.LocalTime;
+
+public class Berkeley {
+    // Function to calculate the time difference between server and node
+    float diff(int h, int m, int s, int nh, int nm, int ns) {
+        return (h * 3600 + m * 60 + s) - (nh * 3600 + nm * 60 + ns);
+    }
+
+    // Function to calculate the average of the time differences
+    float average(float[] diff, int n) {
+        float sum = 0;
+        for (int i = 0; i < n; i++) sum += diff[i];
+        float avg = sum / n;
+        System.out.println("The average of all time differences is " + avg);
+        return avg;
+    }
+
+    void sync(float[] diff, int n, int h, int m, int s, int[] nh, int[] nm, int[] ns, float avg) {
+        int t = (int)((h * 3600 + m * 60 + s) + avg);
+        h = t / 3600;
+        m = (t % 3600) / 60;
+        s = t % 60;
+
+        if (h >= 24) h -= 24;
+
+        for (int i = 0; i < n; i++) {
+            int nodeT = (int)((nh[i] * 3600 + nm[i] * 60 + ns[i]) + avg);
+            nh[i] = nodeT / 3600;
+            nm[i] = (nodeT % 3600) / 60;
+            ns[i] = nodeT % 60;
+
+            if (nh[i] >= 24) nh[i] -= 24;
+        }
+
+        System.out.println("The synchronized clocks are:");
+        System.out.println("Time Server ---> " + h + " : " + m + " : " + s);
+        for (int i = 0; i < n; i++)
+            System.out.println("Node " + (i + 1) + " ---> " + nh[i] + " : " + nm[i] + " : " + ns[i]);
+    }
+
+    public static void main(String[] args) throws IOException {
+        Berkeley b = new Berkeley();
+        BufferedReader obj = new BufferedReader(new InputStreamReader(System.in));
+        LocalTime time = LocalTime.now();
+
+        System.out.print("Enter number of nodes: ");
+        int n = Integer.parseInt(obj.readLine());
+        int h = time.getHour(), m = time.getMinute(), s = time.getSecond();
+        int[] nh = new int[n], nm = new int[n], ns = new int[n];
+        float[] diff = new float[n];
+
+        for (int i = 0; i < n; i++) {
+            System.out.println("Enter time for node " + (i + 1));
+            System.out.print("Hours: "); nh[i] = Integer.parseInt(obj.readLine());
+            System.out.print("Minutes: "); nm[i] = Integer.parseInt(obj.readLine());
+            System.out.print("Seconds: "); ns[i] = Integer.parseInt(obj.readLine());
+        }
+
+        // Calculate time differences for each node
+        for (int i = 0; i < n; i++) {
+            System.out.println("Time Server sent time " + h + " : " + m + " : " + s + " to node " + (i + 1));
+            diff[i] = b.diff(h, m, s, nh[i], nm[i], ns[i]);
+            System.out.println("Node " + (i + 1) + " sent time difference of " + (int) diff[i] + " to Time Server.");
+        }
+
+        // Calculate the average time difference and synchronize clocks
+        float avg = b.average(diff, n);
+        b.sync(diff, n, h, m, s, nh, nm, ns, avg);
+    }
+}
+
+
+Ring******************************
+
+import java.util.*;
+
+public class Ring {
+    static class Process {
+        int id;
+        String state = "active";
+    }
+
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+
+        System.out.print("Enter number of processes: ");
+        int num = sc.nextInt();
+        Process[] proc = new Process[num];
+
+        for (int i = 0; i < num; i++) {
+            proc[i] = new Process();
+            System.out.print("Enter ID for process " + (i + 1) + ": ");
+            proc[i].id = sc.nextInt();
+        }
+
+        proc[num - 1].state = "inactive";  
+        System.out.println("Coordinator: Process " + proc[num - 1].id);
+
+        while (true) {
+            System.out.println("\n1. Election  2. Quit");
+            if (sc.nextInt() == 2) break;
+
+            System.out.print("Enter process initiating election: ");
+            int init = sc.nextInt() - 1;  
+            int current = init, next = (init + 1) % num;
+
+            do {
+                if ("active".equals(proc[next].state) && proc[next].id != proc[num - 1].id) {
+                    System.out.println(proc[current].id + "->" + proc[next].id);
+                    current = next;
+                }
+                next = (next + 1) % num;
+            } while (next != init);
+
+            System.out.println(proc[current].id + "->" + proc[init].id);
+
+            int coordinator = -1;
+            for (int i = 0; i < num; i++) {
+                if ("active".equals(proc[i].state)) {
+                    coordinator = Math.max(coordinator, proc[i].id);
+                }
+            }
+
+            System.out.println("process " + coordinator + " selected as coordinator.");
+            for (int i = 0; i < num; i++) {
+                if (proc[i].id == coordinator) {
+                    proc[i].state = "inactive";
+                    break;
+                }
+            }
+        }
+    }
+}
+
+
+Token-Ring*****************************
+
+MutualServer
+
+import java.io.*;
+import java.net.*;
+
+public class MutualServer {
+    public static void main(String[] a) throws IOException {
+        ServerSocket ss = new ServerSocket(7000);
+        System.out.println("Server Ready");
+
+        while (true) {
+            Socket s = ss.accept();
+            new Thread(() -> {
+                try {
+                    BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()));
+                    String msg;
+                    while ((msg = in.readLine()) != null) {
+                        System.out.println(msg);
+                    }
+                } catch (Exception e) {}
+            }).start();
+        }
+    }
+}
+
+ClientOne
+
+import java.io.*;
+import java.net.*;
+
+public class ClientOne {
+    public static void main(String[] a) throws IOException {
+        Socket s = new Socket("localhost", 7000);
+        PrintStream out = new PrintStream(s.getOutputStream());
+
+        ServerSocket ss = new ServerSocket(7001);
+        Socket s1 = ss.accept();
+        PrintStream out1 = new PrintStream(s1.getOutputStream());
+        BufferedReader in1 = new BufferedReader(new InputStreamReader(s1.getInputStream()));
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+
+        while (true) {
+            System.out.print("Send data? ");
+            if (br.readLine().equalsIgnoreCase("yes")) {
+                out.println(br.readLine());
+            }
+            out1.println("Token");
+            System.out.println("Waiting...");
+            in1.readLine();
+        }
+    }
+}
+
+
+ClientTwo
+
+import java.io.*;
+import java.net.*;
+
+public class ClientTwo {
+    public static void main(String[] a) throws IOException {
+        Socket s = new Socket("localhost", 7000);
+        PrintStream out = new PrintStream(s.getOutputStream());
+
+        Socket s2 = new Socket("localhost", 7001);
+        BufferedReader in2 = new BufferedReader(new InputStreamReader(s2.getInputStream()));
+        PrintStream out2 = new PrintStream(s2.getOutputStream());
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+
+        while (true) {
+            System.out.println("Waiting...");
+            in2.readLine();
+
+            System.out.print("Send data? ");
+            if (br.readLine().equalsIgnoreCase("yes")) {
+                out.println(br.readLine());
+            }
+            out2.println("Token");
+        }
+    }
+}
+
+
+
+
+RMIREGISTRY ASS 1*************************
+
+AddClient
+
+import java.rmi.*;
+
+public class AddClient {
+    public static void main(String[] args) {
+        try {
+            AddServerIntf stub = (AddServerIntf) Naming.lookup("rmi://" + args[0] + "/AddServer");
+            double a = Double.parseDouble(args[1]);
+            double b = Double.parseDouble(args[2]);
+            System.out.println("Sum: " + stub.add(a, b));
+        } catch (Exception e) {
+            System.out.println("Error: " + e);
+        }
+    }
+}
+
+AddServer
+
+import java.rmi.*;
+
+public class AddServer {
+    public static void main(String[] args) {
+        try {
+            Naming.rebind("AddServer", new AddServerImpl());
+            System.out.println("Server ready...");
+        } catch (Exception e) {
+            System.out.println("Error: " + e);
+        }
+    }
+}
+
+
+AddServerImpl
+import java.rmi.*; 
+import java.rmi.server.*;
+
+public class AddServerImpl extends UnicastRemoteObject implements AddServerIntf {
+    AddServerImpl() throws RemoteException {
+        super();
+    }
+
+    public double add(double a, double b) {
+        return a + b;
+    }
+}
+
+
+AddServerIntf
+import java.rmi.*;
+
+public interface AddServerIntf extends Remote { 
+    double add(double d1, double d2) throws RemoteException;
+}
+
